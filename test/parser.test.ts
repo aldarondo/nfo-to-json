@@ -132,6 +132,65 @@ describe('parseNfo', () => {
     expect(result.type).toBe('episode');
   });
 
+  it('resolves tmdb id from uniqueid element', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<movie>
+  <title>TMDb Movie</title>
+  <uniqueid type="imdb">tt1111111</uniqueid>
+  <uniqueid type="tmdb">99999</uniqueid>
+  <uniqueid type="tvdb">88888</uniqueid>
+</movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.imdbId).toBe('tt1111111');
+    expect(result.data.tmdbId).toBe('99999');
+    expect(result.data.tvdbId).toBe('88888');
+  });
+
+  it('returns undefined for art when art tag has no poster or fanart', async () => {
+    const file = tempNfo(`<?xml version="1.0"?><movie><title>T</title><art><other>x</other></art></movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.art).toBeUndefined();
+  });
+
+  it('returns undefined for actors when all actor entries have no name', async () => {
+    const file = tempNfo(`<?xml version="1.0"?><movie><title>T</title><actor><role>Hero</role></actor></movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.actors).toBeUndefined();
+  });
+
+  it('uses writer fallback when credits element is absent', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<movie><title>T</title><writer>Jane Doe</writer></movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.writers).toContain('Jane Doe');
+  });
+
+  it('resolves sonarId from episode uniqueid', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<episodedetails>
+  <title>Ep</title>
+  <uniqueid type="tvdb">123</uniqueid>
+  <uniqueid type="sonarr">456</uniqueid>
+</episodedetails>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('episode');
+    if (result.type !== 'episode') return;
+    expect(result.data.sonarId).toBe('456');
+  });
+
   it('handles XML entities in title', async () => {
     const file = tempNfo(`<?xml version="1.0"?><movie><title>DOG &amp; CAT</title></movie>`);
     const result = await parseNfo(file);
@@ -139,5 +198,78 @@ describe('parseNfo', () => {
     expect(result.type).toBe('movie');
     if (result.type !== 'movie') return;
     expect(result.data.title).toBe('DOG & CAT');
+  });
+
+  it('handles empty strings and invalid numbers', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<movie>
+  <title>  </title>
+  <year>not-a-number</year>
+  <genre>  </genre>
+  <genre></genre>
+</movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.title).toBeUndefined();
+    expect(result.data.year).toBeUndefined();
+    expect(result.data.genres).toBeUndefined();
+  });
+
+  it('handles uniqueid with empty or missing text', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<movie>
+  <title>T</title>
+  <uniqueid type="imdb"></uniqueid>
+  <uniqueid type="tmdb">  </uniqueid>
+  <uniqueid type="tvdb">123</uniqueid>
+</movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.imdbId).toBeUndefined();
+    expect(result.data.tmdbId).toBeUndefined();
+    expect(result.data.tvdbId).toBe('123');
+  });
+
+  it('handles uniqueid with no type attribute', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<movie>
+  <title>T</title>
+  <uniqueid>pure-text-no-type</uniqueid>
+</movie>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('movie');
+    if (result.type !== 'movie') return;
+    expect(result.data.imdbId).toBeUndefined();
+  });
+
+  it('handles sonarId with empty text', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<episodedetails>
+  <title>T</title>
+  <uniqueid type="sonarr">  </uniqueid>
+</episodedetails>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('episode');
+    if (result.type !== 'episode') return;
+    expect(result.data.sonarId).toBeUndefined();
+  });
+
+  it('handles sonarId when uniqueid array exists but has no sonarr entry', async () => {
+    const file = tempNfo(`<?xml version="1.0"?>
+<episodedetails>
+  <title>T</title>
+  <uniqueid type="tvdb">123</uniqueid>
+</episodedetails>`);
+    const result = await parseNfo(file);
+    fs.unlinkSync(file);
+    expect(result.type).toBe('episode');
+    if (result.type !== 'episode') return;
+    expect(result.data.sonarId).toBeUndefined();
   });
 });

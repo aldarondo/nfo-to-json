@@ -102,6 +102,13 @@ describe('buildTvShowsJson', () => {
     expect(buildTvShowsJson([])).toHaveLength(0);
   });
 
+  it('handles episodes with missing season (defaults to 0)', () => {
+    const records: ParsedNfo[] = [{ type: 'episode', data: { title: 'Ep', showTitle: 'Show' } }];
+    const result = buildTvShowsJson(records);
+    expect(result).toHaveLength(1);
+    expect(result[0].seasons[0].season).toBe(0);
+  });
+
   it('handles episodes with missing showTitle gracefully', () => {
     const records: ParsedNfo[] = [{ type: 'episode', data: { title: 'Ep', season: 1, episode: 1 } }];
     const result = buildTvShowsJson(records);

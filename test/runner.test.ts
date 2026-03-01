@@ -30,6 +30,11 @@ describe('run (CLI logic)', () => {
     expect(code).toBe(1);
   });
 
+  it('exits 1 when commander throws (e.g. --help flag)', async () => {
+    const code = await run(['--help']);
+    expect(code).toBe(1);
+  });
+
   it('exits 1 when input directory does not exist', async () => {
     const code = await run(['--input', '/does/not/exist/at/all']);
     expect(code).toBe(1);
@@ -104,7 +109,7 @@ describe('run (CLI logic)', () => {
   it('verbose flag does not change exit code or output files', async () => {
     const dir = makeTempDir(); temps.push(dir);
     fs.writeFileSync(path.join(dir, 'movie.nfo'), MOVIE_NFO);
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => { });
     const code = await run(['--input', dir, '--verbose']);
     expect(code).toBe(0);
     // verbose emits at least one log per file
@@ -116,7 +121,7 @@ describe('run (CLI logic)', () => {
     fs.writeFileSync(path.join(dir, 'bad.nfo'), 'not xml <<<');
     fs.writeFileSync(path.join(dir, 'good.nfo'), MOVIE_NFO);
 
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     const code = await run(['--input', dir]);
     expect(code).toBe(0);
     expect(errSpy.mock.calls.some((c) => String(c[0]).includes('bad.nfo'))).toBe(true);
@@ -126,9 +131,18 @@ describe('run (CLI logic)', () => {
   it('unknown NFO root is logged as a warning and skipped', async () => {
     const dir = makeTempDir(); temps.push(dir);
     fs.writeFileSync(path.join(dir, 'weird.nfo'), `<?xml version="1.0"?><weirdroot><title>X</title></weirdroot>`);
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     const code = await run(['--input', dir]);
     expect(code).toBe(0);
     expect(errSpy.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it('aggregate mode with verbose logs parsing of each file', async () => {
+    const dir = makeTempDir(); temps.push(dir);
+    fs.writeFileSync(path.join(dir, 'movie.nfo'), MOVIE_NFO);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => { });
+    const code = await run(['--input', dir, '--aggregate', '--verbose']);
+    expect(code).toBe(0);
+    expect(spy.mock.calls.some((c) => String(c[0]).includes('parsed:'))).toBe(true);
   });
 });

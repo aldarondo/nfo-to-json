@@ -83,7 +83,7 @@ function resolveIds(node: RawNode): { imdbId?: string; tmdbId?: string; tvdbId?:
   if (Array.isArray(ids)) {
     for (const entry of ids as RawNode[]) {
       const t = str(entry, '@_type');
-      const val = str(entry, '#text') ?? (entry['#text'] != null ? String(entry['#text']) : undefined);
+      const val = str(entry, '#text');
       if (!val) continue;
       if (t === 'imdb') imdbId = val;
       else if (t === 'tmdb') tmdbId = val;
@@ -184,7 +184,7 @@ function mapEpisode(node: RawNode): EpisodeData {
       const ids = node['uniqueid'];
       if (!Array.isArray(ids)) return undefined;
       const entry = (ids as RawNode[]).find((e) => str(e, '@_type') === 'sonarr');
-      return entry ? (str(entry, '#text') ?? undefined) : undefined;
+      return entry ? str(entry, '#text') : undefined;
     })(),
   };
 }

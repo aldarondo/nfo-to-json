@@ -1,43 +1,68 @@
-# @metarr/nfo-parser
-A clone of nfo-parser package from hqwuzhaoyi/gpt-subtitle. The original npm module had project dependencies from gpt-subtitle, and i wanted an isolated version for this project.
+# nfo-to-json
 
-## Introduction
+Recursive directory crawler that parses Kodi/Jellyfin `.nfo` files and converts them to JSON.
 
-`@metarr/nfo-parser` is a simple command-line tool for parsing NFO files and converting their content into JSON format. It is built on Node.js and can be used to handle NFO files containing information about TV series or movies.
+This package is a complete rewrite based on [nfo-parser](https://github.com/metarr-media/nfo-parser), utilizing [nfo-create](https://github.com/aldarondo/nfo-create) for robust type definitions and standardized media metadata interfaces.
+
+## Features
+
+- **Recursive Scanning**: Crawls entire directory trees for `.nfo` files.
+- **Type-Safe Parsing**: Supports Movie, TV Show, and Episode NFO formats.
+- **Aggregate Output**: Can produce unified `movies.json` and `tv-shows.json` files.
+- **Detailed Metadata**: Extracts actors (with roles and thumbs), unique IDs (IMDb, TMDb, TVDb), artwork (posters, fanart), and more.
+- **Security-Minded**: Includes file size caps and prototype pollution protection.
+- **Modern Tooling**: Built with TypeScript, Vitest, and tsup for high performance and reliability.
 
 ## Installation
 
-Install `@metarr/nfo-parser` globally via npm:
-
 ```bash
-npm install -g @metarr/nfo-parser
+npm install -g nfo-to-json
 ```
 
-## Usage
+## CLI Usage
 
-To convert an NFO file to JSON format using nfo-parser, run the following command
+### Basic Conversion
+Converts each `.nfo` file into a corresponding `.json` file in the same directory.
 
 ```bash
-nfo-parser --input <path-to-nfo-file> [--output <path-to-json-file>]
-
+nfo-to-json --input /path/to/media
 ```
 
-- `--input` - Required, specifies the path to the NFO file to be converted.
-- `--output` - Optional, specifies the path to output the JSON file. If not specified, the output is printed to the console.
+### Aggregate Mode
+Collects all discovered records and writes them into two unified files: `movies.json` and `tv-shows.json`.
 
-## Using the parser function
+```bash
+nfo-to-json --input /path/to/media --aggregate --output /path/to/output
+```
 
-To use the parser function in your project, follow these steps：
+### Options
+
+- `-i, --input <path>`: Directory to scan for `.nfo` files (required).
+- `--aggregate`: Write `movies.json` + `tv-shows.json` instead of individual files.
+- `--output <path>`: Output directory for aggregate files (defaults to input path).
+- `--dry-run`: Preview actions without touching the filesystem.
+- `-v, --verbose`: Show detailed per-file processing logs.
+
+## Programmatic API
 
 ```typescript
-import { parser } from "@metarr/nfo-parser";
+import { parseNfo, crawlDir, buildMoviesJson, buildTvShowsJson } from 'nfo-to-json';
 
-(async () => {
-  try {
-    const nfoData = await parser("path/to/yourfile.nfo");
-    console.log(nfoData); // 输出解析后的 JSON 数据
-  } catch (error) {
-    console.error("Error:", error);
-  }
-})();
+// Parse a single file
+const result = await parseNfo('movie.nfo');
+console.log(result.type); // 'movie', 'episode', or 'tvshow'
+console.log(result.data.title);
+
+// Crawl a directory
+for await (const filePath of crawlDir('./media')) {
+  console.log('Found:', filePath);
+}
 ```
+
+## Attribution
+
+This project is a modern rewrite of [metarr-media/nfo-parser](https://github.com/metarr-media/nfo-parser). It has been refactored to use ESM, Vitest, and shared interfaces from [nfo-create](https://github.com/aldarondo/nfo-create).
+
+## License
+
+MIT
